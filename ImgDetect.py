@@ -84,7 +84,7 @@ def command():
 
 
 if __name__ == "__main__":
-
+    # example: python ImageDetect.py -i mydata -o results -ds PVC/color/obj.data -w PVC/color/yolov4-custom_best.weights -cfg PVC/color/yolov4-custom.cfg
     args = command()
 
     # yolo config & weight file
