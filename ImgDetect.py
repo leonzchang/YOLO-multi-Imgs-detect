@@ -39,13 +39,13 @@ def convertBack(x, y, w, h):
     return xmin, ymin, xmax, ymax
 
 
-def draw_defact(xmin, ymin, xmax, ymax, img):
+def draw_defact(xmin, ymin, xmax, ymax, img, className):
     '''
     draw bounding box
     '''
     cv2.rectangle(img, (xmin, ymin),
                   (xmax, ymax), (10, 167, 255), 1)
-    cv2.putText(img, 'defect', (xmin, ymin),
+    cv2.putText(img, className, (xmin, ymin),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (10, 167, 255), 1, cv2.LINE_AA)
     return img
 
@@ -60,8 +60,9 @@ def image_detect(path, filename, network):
         xmin, ymin, xmax, ymax = convertBack(
             defect_unit[2][0], defect_unit[2][1], defect_unit[2][2], defect_unit[2][3])
 
+        className = defect_unit[0].decode('utf-8')
         result_img = draw_defact(
-            xmin, ymin, xmax, ymax, img)
+            xmin, ymin, xmax, ymax, img, className)
     return result_img
 
 
