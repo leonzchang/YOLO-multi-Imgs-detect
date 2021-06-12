@@ -7,7 +7,7 @@ import darknet
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-def detect_obj(img, network):
+def detect_obj(img, network, metadata, threshold):
     '''
     load network configuration
     detect object
@@ -23,7 +23,9 @@ def detect_obj(img, network):
         frame_height, frame_width, frame_channel)
     darknet.copy_image_from_bytes(darknet_image, frame_resized.tobytes())
     detections = darknet.detect_image(
-        network[0], network[1], darknet_image, thresh=0.25)
+        network, metadata, darknet_image, thresh=threshold)
+    # free memory
+    darknet.free_image(darknet_image)
 
     return detections  # return result [(cat., confidence,(x, y, w, h))]
 
@@ -50,12 +52,12 @@ def draw_defact(xmin, ymin, xmax, ymax, img, className):
     return img
 
 
-def image_detect(path, filename, network):
+def image_detect(path, filename, network, metadata, threshold):
     '''
     detect targets in image 
     '''
     img = cv2.imread(path+'/'+filename)
-    detect_result = detect_obj(img, network)
+    detect_result = detect_obj(img, network, metadata, threshold)
     for defect_unit in detect_result:
         xmin, ymin, xmax, ymax = convertBack(
             defect_unit[2][0], defect_unit[2][1], defect_unit[2][2], defect_unit[2][3])
@@ -72,12 +74,14 @@ def command():
                         type=str, required=True, help='enter input path of images')
     parser.add_argument('-o', metavar=("OUTPUT"),
                         type=str, required=True, help='enter save path of result images')
-    parser.add_argument('-ds', metavar=('data-setting'), type=str,
-                        required=True,  help="enter path of obj.data file")
-    parser.add_argument('-cfg', metavar=('CONFIGURATION'), type=str,
-                        required=True, help="enter path of cfg-file")
+    parser.add_argument('-ds', metavar=('DATA_SETTING'),
+                        type=str, required=True, help="enter path of obj.data file")
+    parser.add_argument('-cfg', metavar=('CONFIGURATION'),
+                        type=str, required=True, help="enter path of cfg-file")
     parser.add_argument('-w', metavar=('WEIGHT'),
                         type=str, required=True, help='enter path of weight file')
+    parser.add_argument('-th', metavar=('THRESHOLD'),
+                        type=float, default=0.25,  help='enter threshold default value is 0.25')
 
     args = parser.parse_args()
 
@@ -92,18 +96,24 @@ if __name__ == "__main__":
     configPath = args.cfg
     weightPath = args.w
     metaPath = args.ds
+    threshold = args.th
 
     # yolo setting
-    network = darknet.load_network(configPath, metaPath, weightPath)
+    # config_file (str) weights (str) GPU_id Batch_size
+    network = darknet.load_net_custom(configPath.encode(
+        "ascii"), weightPath.encode("ascii"), 0, 1)
+    metadata = darknet.load_meta(metaPath.encode("ascii"))
 
     # setting input & output path
     input_path = args.i
     output_path = args.o
 
-    # get all input data
+    # get all input imgs data
     imgs = os.listdir(input_path)
 
+    print('process images......')
     for img in imgs:
-        print('......process '+img)
-        result_img = image_detect(input_path, img, network)
+        result_img = image_detect(
+            input_path, img, network, metadata, threshold)
         cv2.imwrite(output_path+'/'+img, result_img)
+    print('done.')
